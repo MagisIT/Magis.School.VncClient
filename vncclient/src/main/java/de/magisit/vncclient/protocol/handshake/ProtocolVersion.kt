@@ -1,6 +1,6 @@
 package de.magisit.vncclient.protocol.handshake
 
-enum class ProtocolVersion private constructor(val versionString: String) {
+enum class ProtocolVersion constructor(val versionString: String) {
     RFB_3_3("RFB 003.003"),
     RFB_3_7("RFB 003.007"),
     RFB_3_8("RFB 003.008");
@@ -10,7 +10,6 @@ enum class ProtocolVersion private constructor(val versionString: String) {
             values().forEach {
                 if (it.versionString == versionString) return it
             }
-
             return null
         }
     }

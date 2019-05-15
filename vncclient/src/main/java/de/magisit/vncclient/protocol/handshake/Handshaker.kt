@@ -11,13 +11,16 @@ import java.net.Socket
 import java.nio.charset.StandardCharsets
 import kotlin.concurrent.thread
 
-class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitializedListener: () -> Unit) {
+class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitializedListener: (FrameBufferInfo) -> Unit) {
 
     val TAG = "Handshaker"
-    val CLIENT_RFB_VERSION = ProtocolVersion.RFB_3_8
 
+    /**
+     * Starts a thread and does the handshake
+     */
     fun doHandshake() {
         thread {
+            Log.i(this.TAG, "doHandshake: Starting RFB handshake")
             // Connect to socket
             socket.connect(InetSocketAddress(settings.host, settings.port))
             Log.i(this.TAG, "doHandshake: Successfully connected to host ${settings.host} on port ${settings.port}")
@@ -28,16 +31,16 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
             // Read the Protocol Version from the socket
             val protocolVersion = this.getProtocolVersion(dataInputStream = dataInputStream)
-            Log.i(this.TAG, "doHandshake: Got protocol version $protocolVersion from server")
+            Log.i(this.TAG, "doHandshake: Received protocol version ${protocolVersion.versionString} from server")
 
             // Reply the server that we accept the version we got
-            dataOutputStream.write("${protocolVersion!!.versionString}\n".toByteArray(StandardCharsets.UTF_8))
+            dataOutputStream.write("${protocolVersion.versionString}\n".toByteArray(StandardCharsets.UTF_8))
 
             // Get the available security types from the server
             val availableSecurityTypes = getAvailableSecurityTypes(dataInputStream, protocolVersion)
             Log.i(
                 this.TAG,
-                "doHandshake: Got following security types from server: ${availableSecurityTypes.contentToString()}"
+                "doHandshake: Received the following security types from server: ${availableSecurityTypes.contentToString()}"
             )
 
             // Get the security type specified in the settings
@@ -50,31 +53,45 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
             // If the protocol version is 3.3 we have to send the security type id before authenticating
             if (protocolVersion != ProtocolVersion.RFB_3_3) {
-                Log.d(this.TAG, "Send the Server the selected Security Type ID")
+                Log.i(
+                    this.TAG,
+                    "doHandshake: Send the server the specified security type (${securityType.securityTypeId})"
+                )
                 dataOutputStream.write(securityType.securityTypeId)
             }
 
             // Try to authenticate using the given securityType
-            Log.d(
+            Log.i(
                 this.TAG,
-                "Trying to authenticate using the following security type (id): ${securityType.securityTypeId}"
+                "doHandshake: Trying to authenticate using security type (${securityType.securityTypeId})"
             )
             securityType.authenticate(protocolVersion, dataInputStream, dataOutputStream)
 
             // Get the result from the server
             this.getSecurityResult(protocolVersion, dataInputStream)
-            Log.d(this.TAG, "Authentication successful!")
+            Log.i(this.TAG, "doHandshake: Authentication on ${settings.host}:${settings.port} successful")
 
-            onInitializedListener()
+            // Send the client init message containing the "shared" flag specified in the settings
+            Log.i(this.TAG, "doHandshake: Sending client init message to the server")
+            dataOutputStream.writeByte(if (settings.leaveOtherClientsConnected) 1 else 0)
 
+            // Read the server init message
+            Log.i(this.TAG, "doHandshake: Reading server init message")
+            val frameBufferInfo = this.readServerInitMessage(dataInputStream)
+
+            // Log the information collected from the server init message
+            Log.i(this.TAG, "doHandshake: Received the following FrameBufferInfo from the server: $frameBufferInfo")
+            Log.i(this.TAG, "doHandshake: Handshake done")
+
+            // Callback to the RfbClient with the frameBufferInfo received from handshake
+            onInitializedListener(frameBufferInfo)
         }
-
     }
 
     /**
      * Reads the Protocol Version from the Input Stream and returns a ProtocolVersion Object
      */
-    private fun getProtocolVersion(dataInputStream: ExtendedDataInputStream): ProtocolVersion? {
+    private fun getProtocolVersion(dataInputStream: ExtendedDataInputStream): ProtocolVersion {
         // Create the Byte Array Buffer
         val protocolVersionBuffer = ByteArray(12)
         // Read the Bytes from the Input Stream
@@ -82,10 +99,12 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
         // Convert the ByteArray to a String
         val protocolVersion = String(protocolVersionBuffer, StandardCharsets.UTF_8).replace("\n", "")
-        Log.d(this.TAG, "getProtocolVersion: Received Protocol Version $protocolVersion")
 
         // Return the ProtocolVersion Object
-        return ProtocolVersion.getVersionFromString(protocolVersion)
+        val version = ProtocolVersion.getVersionFromString(protocolVersion)
+            ?: throw VncProtocolException("The server responded with an unsupported protocol version")
+
+        return version
     }
 
     /**
@@ -129,7 +148,7 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
     }
 
     /**
-     * Reads the reason Message of there was an error while getting the security types
+     * Reads a reason string from the input stream if the server responds with one
      */
     private fun getReasonMessage(dataInputStream: ExtendedDataInputStream): String {
         // Get the length of the reason
@@ -165,19 +184,30 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
             throw VncProtocolException("Failed to authenticate")
         }
     }
+
+    /**
+     * Receives the server init message and parses it to the correct objects
+     */
+    private fun readServerInitMessage(dataInputStream: ExtendedDataInputStream): FrameBufferInfo {
+        // Read the width and height from the input stream
+        val frameBufferWidth = dataInputStream.readUnsignedShort()
+        val frameBufferHeight = dataInputStream.readUnsignedShort()
+
+        // Read the pixel format from the input stream
+        val pixelFormat = PixelFormat.fromBuffer(dataInputStream)
+
+        // Read the desktop name lenght
+        val desktopNameLenght = dataInputStream.readInt()
+        // If the length is less than 0 the desktop name is to long
+        if (desktopNameLenght < 0) throw VncProtocolException("The Desktop name sent by the server is too long")
+
+        // Read the ByteArray containing the desktop name from the input stream
+        val desktopNameByteArray = ByteArray(desktopNameLenght)
+        dataInputStream.readFully(desktopNameByteArray)
+
+        // Decode it into a String using UTF-8
+        val desktopName = String(desktopNameByteArray, StandardCharsets.UTF_8)
+        // Return a FrameBufferInfo Object with all the info from the server init message
+        return FrameBufferInfo(frameBufferWidth, frameBufferHeight, pixelFormat, desktopName)
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

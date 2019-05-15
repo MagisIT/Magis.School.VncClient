@@ -6,5 +6,6 @@ import de.magisit.vncclient.protocol.handshake.authentication.SecurityTypeNone
 class RfbSettings constructor(
     val host: String = "localhost",
     val port: Int = 5901,
-    val securityType: SecurityType = SecurityTypeNone()
+    val securityType: SecurityType = SecurityTypeNone(),
+    val leaveOtherClientsConnected: Boolean = true
 )

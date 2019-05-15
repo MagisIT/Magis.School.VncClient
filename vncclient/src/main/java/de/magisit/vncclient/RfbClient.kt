@@ -18,7 +18,7 @@ class RfbClient(val settings: RfbSettings) {
             settings = settings,
             socket = socket
         ) {
-
+            // TODO Go on with the protocol
         }.doHandshake()
     }
 

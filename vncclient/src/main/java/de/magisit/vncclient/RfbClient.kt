@@ -1,28 +1,95 @@
 package de.magisit.vncclient
 
+import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.util.Log
 import de.magisit.vncclient.protocol.RfbProtocol
 import de.magisit.vncclient.protocol.encodings.Encoding
+import de.magisit.vncclient.protocol.encodings.FrameEncoding
+import de.magisit.vncclient.protocol.encodings.PseudoEncoding
+import de.magisit.vncclient.protocol.encodings.frame.RawEncoding
+import de.magisit.vncclient.protocol.encodings.pseudo.DesktopSizePseudoEncoding
+import de.magisit.vncclient.protocol.handshake.FrameBufferInfo
 import de.magisit.vncclient.protocol.handshake.Handshaker
 import java.net.Socket
 
-class RfbClient(val settings: RfbSettings) {
+/**
+ * RfbClient
+ */
+@SuppressLint("UseSparseArrays")
+class RfbClient(val settings: RfbSettings, val updateBitmap: (Bitmap) -> Unit) {
 
-    private lateinit var internalCodings: ArrayList<Encoding>
+    // Tag for logging
     private val TAG = "RfbClient"
 
-    init {
+    // Frame buffer info from handshake
+    lateinit var frameBufferInfo: FrameBufferInfo
 
+    // Internally supported pseudo encodings
+    private val internalPseudoEncodings: ArrayList<PseudoEncoding> = arrayListOf()
+
+    // internal supported frame encodings
+    private val internalFrameEncodings: ArrayList<FrameEncoding> = arrayListOf()
+
+    // Merged encodings (all pseudo and frame encodings, internally and custom)
+    private val mergedEncodings = HashMap<Int, Encoding>()
+
+    // Merged pseudo encodings (internally and custom)
+    val mergedPseudoEncodings = HashMap<Int, PseudoEncoding>()
+
+    // Merged frame encodings (internally and custom)
+    val mergedFrameEncodings = HashMap<Int, FrameEncoding>()
+
+    // Bitmap to show the frame buffer
+    // TODO Build an abstract system to support custom resources for image showing not only a bitmap (which is android internal)
+    lateinit var bitmap: Bitmap
+
+
+    /**
+     * Init function of the class
+     */
+    init {
+        // Add the internal pseudo encodings to the list
+        this.internalPseudoEncodings.add(DesktopSizePseudoEncoding())
+
+        // Add the internal frame encodings to the list
+        this.internalFrameEncodings.add(RawEncoding())
+
+        // Merge the encodings
+        this.mergeEncodings()
     }
 
+    /**
+     * Connect the rfb client
+     */
     fun connect() {
+        // Create a socket
         val socket = Socket()
-        val rfbProtocol = RfbProtocol(socket)
+
+        // Initialize the rfb protocol
+        val rfbProtocol = RfbProtocol(
+                socket = socket,
+                encodingsList = mergedEncodings,
+                rfbClient = this
+        )
+
+        // Initialize a handshaker and start the handshake
         Handshaker(
-            settings = settings,
-            socket = socket
+                settings = settings,
+                socket = socket
         ) {
+            // If the handshake is done, start the protocol
             Log.i(this.TAG, "connect: Received handshake callback")
+            frameBufferInfo = it
+
+            // Initialize the bitmap
+            val bitmapConfig = Bitmap.Config.ARGB_8888
+            bitmap = Bitmap.createBitmap(
+                    frameBufferInfo.frameBufferWidth,
+                    frameBufferInfo.frameBufferHeight,
+                    bitmapConfig
+            )
+
             rfbProtocol.startProtocol()
         }.doHandshake()
     }
@@ -51,5 +118,30 @@ class RfbClient(val settings: RfbSettings) {
 
     }
 
+    /**
+     * Merge the internal and custom frame and pseudo encodings
+     */
+    private fun mergeEncodings() {
+
+        internalPseudoEncodings.forEach {
+            mergedPseudoEncodings[it.encodingId] = it
+            mergedEncodings[it.encodingId] = it
+        }
+
+        settings.customPseudoEncodings.forEach {
+            mergedPseudoEncodings[it.encodingId] = it
+            mergedEncodings[it.encodingId] = it
+        }
+
+        internalFrameEncodings.forEach {
+            mergedFrameEncodings[it.encodingId] = it
+            mergedEncodings[it.encodingId] = it
+        }
+
+        settings.customFrameEncodings.forEach {
+            mergedFrameEncodings[it.encodingId] = it
+            mergedEncodings[it.encodingId] = it
+        }
+    }
 
 }

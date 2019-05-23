@@ -1,5 +1,6 @@
 package de.magisit.vncclient.protocol.handshake.authentication
 
+import android.annotation.SuppressLint
 import android.util.Log
 import de.magisit.vncclient.protocol.handshake.ProtocolVersion
 import de.magisit.vncclient.utils.ExtendedDataInputStream
@@ -8,6 +9,9 @@ import de.magisit.vncclient.utils.Utils
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 
+/**
+ * VncAuthentification security type
+ */
 class SecurityTypeVncAuthentication(private var password: String) : SecurityType(2) {
 
     // TAG for logging
@@ -44,9 +48,9 @@ class SecurityTypeVncAuthentication(private var password: String) : SecurityType
      * Authenticates the User with the specific SecurityMethod
      */
     override fun authenticate(
-        protocolVersion: ProtocolVersion,
-        dataInputStream: ExtendedDataInputStream,
-        dataOutputStream: ExtendedDataOutputStream
+            protocolVersion: ProtocolVersion,
+            dataInputStream: ExtendedDataInputStream,
+            dataOutputStream: ExtendedDataOutputStream
     ) {
         // Read the server challenge
         val serverChallenge = ByteArray(16)
@@ -61,6 +65,7 @@ class SecurityTypeVncAuthentication(private var password: String) : SecurityType
     /**
      * Encrypts the password using DES and a server challenge
      */
+    @SuppressLint("GetInstance")
     private fun encrypt(serverChallenge: ByteArray, passwordBytes: ByteArray): ByteArray {
 
         // Key for DES

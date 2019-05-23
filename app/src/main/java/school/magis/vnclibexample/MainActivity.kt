@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import de.magisit.vncclient.RfbClient
 import de.magisit.vncclient.RfbSettings
-import de.magisit.vncclient.protocol.handshake.authentication.SecurityTypeVncAuthentication
+import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -12,15 +12,18 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val imageView = main_image_view
+
         val client = RfbClient(
-            RfbSettings(
-                host = "kst-vechta.de",
-                port = 11006,
-                securityType = SecurityTypeVncAuthentication("rbySHcP2"),
-                leaveOtherClientsConnected = true
-            )
-        )
+                RfbSettings()
+        ) {
+
+            runOnUiThread({
+                imageView.setImageBitmap(it)
+            })
+        }
         client.connect()
+
 
     }
 }

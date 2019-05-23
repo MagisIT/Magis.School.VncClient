@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">VncLibExample</string>
+    <string name="rfbprotocol_frame">RfbProtocol Frame</string>
 </resources>

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class ExtendedDataOutputStream extends DataOutputStream {
+    // TODO convert to kotlin
 
     public ExtendedDataOutputStream(OutputStream out) {
         super(out);

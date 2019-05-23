@@ -5,7 +5,7 @@ import de.magisit.vncclient.RfbSettings
 import de.magisit.vncclient.utils.ExtendedDataInputStream
 import de.magisit.vncclient.utils.ExtendedDataOutputStream
 import de.magisit.vncclient.utils.Utils
-import de.magisit.vncclient.utils.exceptions.VncProtocolException
+import de.magisit.vncclient.utils.exceptions.RfbProtocolException
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.charset.StandardCharsets
@@ -48,7 +48,7 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
             // Check if the given security type is supported by the server
             if (!Utils.inArray(securityType.securityTypeId, availableSecurityTypes)) {
-                throw VncProtocolException("The server does not except the given security Type")
+                throw RfbProtocolException("The server does not except the given security Type")
             }
 
             // If the protocol version is 3.3 we have to send the security type id before authenticating
@@ -102,7 +102,7 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
         // Return the ProtocolVersion Object
         val version = ProtocolVersion.getVersionFromString(protocolVersion)
-            ?: throw VncProtocolException("The server responded with an unsupported protocol version")
+                ?: throw RfbProtocolException("The server responded with an unsupported protocol version")
 
         return version
     }
@@ -121,7 +121,7 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
             // If the securityType is 0 there was a problem getting it
             if (securityType == 0) {
-                throw VncProtocolException("Cannot get security type of RFB protocol version 3.3")
+                throw RfbProtocolException("Cannot get security type of RFB protocol version 3.3")
             }
 
             // Return the available security type
@@ -133,7 +133,7 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
         // If there are no securityTypes available read the reason and throw an exception
         if (securityTypeCount == 0) {
-            throw VncProtocolException(
+            throw RfbProtocolException(
                 "Connect get security types from server Reason: ${getReasonMessage(
                     dataInputStream
                 )}"
@@ -156,7 +156,7 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
         // If the reason length is less than zero there was probably a overflow
         if (reasonLength < 0) {
-            throw VncProtocolException("The reason length exceeded the maximum integer value")
+            throw RfbProtocolException("The reason length exceeded the maximum integer value")
         }
 
         // Read the reasonBytes from the input stream
@@ -177,11 +177,11 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
         if (result != 0) {
             // If the protocol version is 3.8 the server sends a reason
             if (protocolVersion == ProtocolVersion.RFB_3_8) {
-                throw VncProtocolException("Failed to authenticate: ${getReasonMessage(dataInputStream)}")
+                throw RfbProtocolException("Failed to authenticate: ${getReasonMessage(dataInputStream)}")
             }
 
             // If the protocol version is less than 3.8 we get no reason
-            throw VncProtocolException("Failed to authenticate")
+            throw RfbProtocolException("Failed to authenticate")
         }
     }
 
@@ -199,7 +199,7 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
         // Read the desktop name lenght
         val desktopNameLenght = dataInputStream.readInt()
         // If the length is less than 0 the desktop name is to long
-        if (desktopNameLenght < 0) throw VncProtocolException("The Desktop name sent by the server is too long")
+        if (desktopNameLenght < 0) throw RfbProtocolException("The Desktop name sent by the server is too long")
 
         // Read the ByteArray containing the desktop name from the input stream
         val desktopNameByteArray = ByteArray(desktopNameLenght)

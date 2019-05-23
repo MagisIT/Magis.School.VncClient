@@ -4,7 +4,10 @@ import de.magisit.vncclient.protocol.handshake.ProtocolVersion
 import de.magisit.vncclient.utils.ExtendedDataInputStream
 import de.magisit.vncclient.utils.ExtendedDataOutputStream
 
-class SecurityTypeNone() : SecurityType(1) {
+/**
+ * None security type
+ */
+class SecurityTypeNone : SecurityType(1) {
     override fun authenticate(
         protocolVersion: ProtocolVersion,
         dataInputStream: ExtendedDataInputStream,

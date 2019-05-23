@@ -2,7 +2,6 @@ package de.magisit.vncclient.utils;
 
 public class Utils {
     //TODO Convert to kotlin
-
     public static boolean inArray(int search, int[] array) {
         for (int element : array) {
             if (element == search)

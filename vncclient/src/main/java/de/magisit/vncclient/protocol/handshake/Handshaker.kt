@@ -102,7 +102,7 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
         // Return the ProtocolVersion Object
         val version = ProtocolVersion.getVersionFromString(protocolVersion)
-                ?: throw RfbProtocolException("The server responded with an unsupported protocol version")
+            ?: throw RfbProtocolException("The server responded with an unsupported protocol version")
 
         return version
     }
@@ -161,7 +161,7 @@ class Handshaker(val socket: Socket, val settings: RfbSettings, val onInitialize
 
         // Read the reasonBytes from the input stream
         val reasonBytes = ByteArray(reasonLength)
-        // TODO Bytes lesen?!
+        dataInputStream.readFully(reasonBytes)
 
         return String(reasonBytes, StandardCharsets.US_ASCII)
     }

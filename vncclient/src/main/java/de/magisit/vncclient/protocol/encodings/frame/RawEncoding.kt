@@ -14,12 +14,12 @@ class RawEncoding : FrameEncoding(0) {
      * Read the data from the input stream and decode it
      */
     override fun readAndDecode(
-            inputStream: ExtendedDataInputStream,
-            rfbClient: RfbClient,
-            width: Int,
-            height: Int,
-            xPosition: Int,
-            yPosition: Int
+        inputStream: ExtendedDataInputStream,
+        rfbClient: RfbClient,
+        width: Int,
+        height: Int,
+        xPosition: Int,
+        yPosition: Int
     ) {
         // Bits per pixel from the PixelFormat information
         val bitsPerPixel = rfbClient.frameBufferInfo.pixelFormat.bitsPerPixel
@@ -101,7 +101,7 @@ class RawEncoding : FrameEncoding(0) {
 
                     // TODO: Multiply color values to support 24 and 16 bit colors.
                     // Set the pixel on the bitmap
-                    rfbClient.bitmap.setPixel(xPosition + x, yPosition + y, Color.argb(255, red, green, blue))
+                    rfbClient.bitmap.setPixel(xPosition + x, yPosition + y, Color.rgb(red, green, blue))
 
                     // If we reached the end of one row set the x coordinate to 0 and increase y by 1
                     if (++x == width) {
@@ -117,8 +117,6 @@ class RawEncoding : FrameEncoding(0) {
 
             // Increase the total read bytes by the length of the chunk processed
             totalReadBytes += chunkLength
-            // Notify the client that the bitmap was updated
-            rfbClient.updateBitmap(rfbClient.bitmap)
         }
     }
 }

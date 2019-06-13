@@ -3,20 +3,23 @@ package de.magisit.vncclient.protocol.communication
 import de.magisit.vncclient.RfbClient
 import de.magisit.vncclient.protocol.communication.messages.OutgoingMessage
 import de.magisit.vncclient.utils.ExtendedDataOutputStream
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.LinkedBlockingDeque
 import kotlin.concurrent.thread
 
 class RfbMessageSender {
 
     // Initialize a blocking queue to ensure message synchronization
-    private val blockingQueue: BlockingQueue<OutgoingMessage> = LinkedBlockingQueue<OutgoingMessage>()
+    private val blockingQueue: LinkedBlockingDeque<OutgoingMessage> = LinkedBlockingDeque()
 
     /**
      * Adds a message to the blocking queue
      */
-    fun sendMessage(outgoingMessage: OutgoingMessage) {
-        blockingQueue.put(outgoingMessage)
+    fun sendMessage(outgoingMessage: OutgoingMessage, highPriority: Boolean = false) {
+        if (highPriority) {
+            blockingQueue.addFirst(outgoingMessage)
+        } else {
+            blockingQueue.add(outgoingMessage)
+        }
     }
 
     /**

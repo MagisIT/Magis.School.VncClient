@@ -14,13 +14,13 @@ class MainActivity : AppCompatActivity() {
 
         val imageView = main_image_view
 
-        val client = RfbClient(
-                RfbSettings()
-        ) {
 
-            runOnUiThread({
+        val client = RfbClient(
+            RfbSettings()
+        ) {
+            runOnUiThread {
                 imageView.setImageBitmap(it)
-            })
+            }
         }
         client.connect()
 

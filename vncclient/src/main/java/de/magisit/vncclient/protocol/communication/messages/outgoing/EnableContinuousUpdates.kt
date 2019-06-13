@@ -6,15 +6,14 @@ import de.magisit.vncclient.utils.ConvertUtils
 import de.magisit.vncclient.utils.ExtendedDataOutputStream
 
 class EnableContinuousUpdates(
-        private val enable: Boolean,
-        private val xPosition: Int,
-        private val yPosition: Int,
-        private val width: Int,
-        private val height: Int
+    private val enable: Boolean,
+    private val xPosition: Int,
+    private val yPosition: Int,
+    private val width: Int,
+    private val height: Int
 ) : OutgoingMessage(messageId = 150) {
 
     override fun sendMessage(outputStream: ExtendedDataOutputStream, rfbClient: RfbClient) {
-
         val enableContinuousUpdatesMessage = ByteArray(10)
 
         enableContinuousUpdatesMessage[0] = messageId.toByte()
@@ -33,6 +32,8 @@ class EnableContinuousUpdates(
         System.arraycopy(y, 0, enableContinuousUpdatesMessage, 4, 2)
         System.arraycopy(w, 0, enableContinuousUpdatesMessage, 6, 2)
         System.arraycopy(h, 0, enableContinuousUpdatesMessage, 8, 2)
+
+        outputStream.write(enableContinuousUpdatesMessage)
 
     }
 

@@ -23,7 +23,6 @@ class FrameBufferUpdate : IncomingMessage(messageId = 0) {
 
         // Repeat numberOfRectangles times
         repeat(numberOfRectangles) {
-
             // Read the x and y position of the current rectangle
             val xPosition = inputStream.readUnsignedShort()
             val yPosition = inputStream.readUnsignedShort()
@@ -40,13 +39,15 @@ class FrameBufferUpdate : IncomingMessage(messageId = 0) {
 
             // Read and decode the rectangle received
             rfbClient.mergedFrameEncodings[encodingType]!!.readAndDecode(
-                    inputStream,
-                    rfbClient,
-                    width,
-                    height,
-                    xPosition,
-                    yPosition
+                inputStream,
+                rfbClient,
+                width,
+                height,
+                xPosition,
+                yPosition
             )
         }
+
+        rfbClient.updateBitmap(rfbClient.bitmap)
     }
 }

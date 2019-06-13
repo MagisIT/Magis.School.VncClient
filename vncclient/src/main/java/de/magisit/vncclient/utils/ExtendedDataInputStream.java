@@ -23,4 +23,19 @@ public class ExtendedDataInputStream extends DataInputStream {
             unsignedBytes[i] = 0xFF & signedBytes[i];
         }
     }
+
+    public int readCompactLength() throws IOException {
+        int[] portion = new int[3];
+        portion[0] = this.readUnsignedByte();
+        int len = portion[0] & 0x7F;
+        if ((portion[0] & 0x80) != 0) {
+            portion[1] = this.readUnsignedByte();
+            len |= (portion[1] & 0x7F) << 7;
+            if ((portion[1] & 0x80) != 0) {
+                portion[2] = this.readUnsignedByte();
+                len |= (portion[2] & 0xFF) << 14;
+            }
+        }
+        return len;
+    }
 }

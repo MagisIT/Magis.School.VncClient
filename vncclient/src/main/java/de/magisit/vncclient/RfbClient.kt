@@ -7,8 +7,10 @@ import de.magisit.vncclient.protocol.RfbProtocol
 import de.magisit.vncclient.protocol.encodings.Encoding
 import de.magisit.vncclient.protocol.encodings.FrameEncoding
 import de.magisit.vncclient.protocol.encodings.PseudoEncoding
-import de.magisit.vncclient.protocol.encodings.frame.RawEncoding
+import de.magisit.vncclient.protocol.encodings.frame.*
+import de.magisit.vncclient.protocol.encodings.pseudo.ContinuousUpdatesPseudoEncoding
 import de.magisit.vncclient.protocol.encodings.pseudo.DesktopSizePseudoEncoding
+import de.magisit.vncclient.protocol.encodings.pseudo.FencePseudoEncoding
 import de.magisit.vncclient.protocol.handshake.FrameBufferInfo
 import de.magisit.vncclient.protocol.handshake.Handshaker
 import java.net.Socket
@@ -32,13 +34,15 @@ class RfbClient(val settings: RfbSettings, val updateBitmap: (Bitmap) -> Unit) {
     private val internalFrameEncodings: ArrayList<FrameEncoding> = arrayListOf()
 
     // Merged encodings (all pseudo and frame encodings, internally and custom)
-    private val mergedEncodings = HashMap<Int, Encoding>()
+    val mergedEncodings = HashMap<Int, Encoding>()
 
     // Merged pseudo encodings (internally and custom)
     val mergedPseudoEncodings = HashMap<Int, PseudoEncoding>()
 
     // Merged frame encodings (internally and custom)
     val mergedFrameEncodings = HashMap<Int, FrameEncoding>()
+
+    lateinit var rfbProtocol: RfbProtocol
 
     // Bitmap to show the frame buffer
     // TODO Build an abstract system to support custom resources for image showing not only a bitmap (which is android internal)
@@ -51,9 +55,15 @@ class RfbClient(val settings: RfbSettings, val updateBitmap: (Bitmap) -> Unit) {
     init {
         // Add the internal pseudo encodings to the list
         this.internalPseudoEncodings.add(DesktopSizePseudoEncoding())
+        this.internalPseudoEncodings.add(FencePseudoEncoding())
+        this.internalPseudoEncodings.add(ContinuousUpdatesPseudoEncoding())
 
         // Add the internal frame encodings to the list
         this.internalFrameEncodings.add(RawEncoding())
+        this.internalFrameEncodings.add(CopyRectEncoding())
+        this.internalFrameEncodings.add(DesktopResizeEncoding())
+        this.internalFrameEncodings.add(RREEncoding())
+        this.internalFrameEncodings.add(TightEncoding())
 
         // Merge the encodings
         this.mergeEncodings()
@@ -67,16 +77,16 @@ class RfbClient(val settings: RfbSettings, val updateBitmap: (Bitmap) -> Unit) {
         val socket = Socket()
 
         // Initialize the rfb protocol
-        val rfbProtocol = RfbProtocol(
-                socket = socket,
-                encodingsList = mergedEncodings,
-                rfbClient = this
+        rfbProtocol = RfbProtocol(
+            socket = socket,
+            encodingsList = mergedEncodings,
+            rfbClient = this
         )
 
         // Initialize a handshaker and start the handshake
         Handshaker(
-                settings = settings,
-                socket = socket
+            settings = settings,
+            socket = socket
         ) {
             // If the handshake is done, start the protocol
             Log.i(this.TAG, "connect: Received handshake callback")
@@ -85,9 +95,9 @@ class RfbClient(val settings: RfbSettings, val updateBitmap: (Bitmap) -> Unit) {
             // Initialize the bitmap
             val bitmapConfig = Bitmap.Config.ARGB_8888
             bitmap = Bitmap.createBitmap(
-                    frameBufferInfo.frameBufferWidth,
-                    frameBufferInfo.frameBufferHeight,
-                    bitmapConfig
+                frameBufferInfo.frameBufferWidth,
+                frameBufferInfo.frameBufferHeight,
+                bitmapConfig
             )
 
             rfbProtocol.startProtocol()

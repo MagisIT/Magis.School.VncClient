@@ -6,6 +6,5 @@ import de.magisit.vncclient.utils.ExtendedDataInputStream
 
 class DesktopSizePseudoEncoding : PseudoEncoding(encodingId = -223) {
     override fun readAndDecode(inputStream: ExtendedDataInputStream, rfbClient: RfbClient) {
-
     }
 }

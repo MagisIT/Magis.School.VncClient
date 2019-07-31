@@ -4,9 +4,7 @@ import de.magisit.vncclient.RfbClient
 import de.magisit.vncclient.protocol.communication.RfbMessageReceiver
 import de.magisit.vncclient.protocol.communication.RfbMessageSender
 import de.magisit.vncclient.protocol.communication.messages.OutgoingMessage
-import de.magisit.vncclient.protocol.communication.messages.incoming.EndOfContinuousUpdates
-import de.magisit.vncclient.protocol.communication.messages.incoming.FrameBufferUpdate
-import de.magisit.vncclient.protocol.communication.messages.incoming.ServerFence
+import de.magisit.vncclient.protocol.communication.messages.incoming.*
 import de.magisit.vncclient.protocol.communication.messages.outgoing.FrameBufferUpdateRequest
 import de.magisit.vncclient.protocol.communication.messages.outgoing.SetEncodings
 import de.magisit.vncclient.protocol.encodings.Encoding
@@ -38,7 +36,12 @@ class RfbProtocol(
         // Start the thread to receive incoming messages
         thread {
             // Register the messageTypes supported
+            // Messages that must be supported
             messageReceiver.registerMessageType(FrameBufferUpdate())
+            messageReceiver.registerMessageType(ServerCutText())
+            messageReceiver.registerMessageType(Bell())
+
+            // Optional
             messageReceiver.registerMessageType(ServerFence())
             messageReceiver.registerMessageType(EndOfContinuousUpdates())
 

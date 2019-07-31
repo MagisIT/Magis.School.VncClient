@@ -167,12 +167,14 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
         if (compressionControl == this.tightJpegEncoding) {
             jpegDataLength = inputStream.readCompactLength()
 
-            if (this.inflaterBuffer.size < jpegDataLength) this.inflaterBuffer = ByteArray(2 * jpegDataLength)
+            if (this.inflaterBuffer.size < jpegDataLength) this.inflaterBuffer =
+                ByteArray(2 * jpegDataLength)
 
             inputStream.readFully(this.inflaterBuffer, 0, jpegDataLength)
 
             // Decode JPEG
-            tightJpegBitmap = BitmapFactory.decodeByteArray(inflaterBuffer, 0, jpegDataLength, bitmapOptions)
+            tightJpegBitmap =
+                BitmapFactory.decodeByteArray(inflaterBuffer, 0, jpegDataLength, bitmapOptions)
 
             // TODO Creating a new bitmap every time a JPEG Frame comes is probably a bad idea in terms of memory and performance
             // Replace the specific part of the main bitmap with the new decoded jpeg information
@@ -218,7 +220,8 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
 
                         repeat(numberOfColors * 3) {
                             // Add the new byte to the existing pixel data
-                            pixelData = pixelData or (tightColorBuffer[it].toInt() and 0xFF shl (colorOffset * 8))
+                            pixelData =
+                                pixelData or (tightColorBuffer[it].toInt() and 0xFF shl (colorOffset * 8))
 
                             // If we read the needed 4 bytes (RGBA) shift them by the shift value and apply the color mask
                             if (++colorOffset == 3) {
@@ -392,7 +395,8 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
 
                 repeat(dataSize) {
                     // Add the new byte to the existing pixel data
-                    pixelData = pixelData or (inflaterBuffer[it].toInt() and 0xFF shl (colorOffset * 8))
+                    pixelData =
+                        pixelData or (inflaterBuffer[it].toInt() and 0xFF shl (colorOffset * 8))
 
                     // If we read the needed 3 bytes (RGB) shift them by the shift value and apply the color mask
                     if (++colorOffset == 3) {

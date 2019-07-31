@@ -2,6 +2,7 @@ package de.magisit.vncclient.protocol.communication.messages.incoming
 
 import de.magisit.vncclient.RfbClient
 import de.magisit.vncclient.protocol.communication.messages.IncomingMessage
+import de.magisit.vncclient.protocol.encodings.frame.LastRectEncoding
 import de.magisit.vncclient.utils.ExtendedDataInputStream
 import de.magisit.vncclient.utils.exceptions.RfbProtocolException
 
@@ -37,8 +38,15 @@ class FrameBufferUpdate : IncomingMessage(messageId = 0) {
             // Check if the received encoding is supported, if not the server did something wrong and an exception is thrown
             if (!rfbClient.mergedFrameEncodings.containsKey(encodingType)) throw RfbProtocolException("Received an unsupported encoding type")
 
+            val frameEncoding = rfbClient.mergedFrameEncodings[encodingType]!!
+
+            if (frameEncoding is LastRectEncoding) {
+                rfbClient.updateBitmap(rfbClient.bitmap)
+                return
+            }
+
             // Read and decode the rectangle received
-            rfbClient.mergedFrameEncodings[encodingType]!!.readAndDecode(
+            frameEncoding.readAndDecode(
                 inputStream,
                 rfbClient,
                 width,
@@ -47,7 +55,5 @@ class FrameBufferUpdate : IncomingMessage(messageId = 0) {
                 yPosition
             )
         }
-
-        rfbClient.updateBitmap(rfbClient.bitmap)
     }
 }

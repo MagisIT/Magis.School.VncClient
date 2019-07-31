@@ -23,7 +23,5 @@ class MainActivity : AppCompatActivity() {
             }
         }
         client.connect()
-
-
     }
 }

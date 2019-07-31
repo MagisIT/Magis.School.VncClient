@@ -15,9 +15,6 @@ class RfbMessageReceiver {
         var messageId: Int
 
         while (inputStream.readUnsignedByte().also { messageId = it } != -1) {
-            // Log the received message type
-            Log.d(this.TAG, "startReceiving: Received a message with id $messageId")
-
             // Check if the message type can be handled by one of the message types otherwise throw an exception
             // because the length of the following message is unknown and you cant tell where the next messsage
             // starts

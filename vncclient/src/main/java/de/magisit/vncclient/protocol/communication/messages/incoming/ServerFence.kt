@@ -19,7 +19,7 @@ class ServerFence : IncomingMessage(messageId = 248) {
         val payload = ByteArray(length)
         inputStream.readFully(payload)
 
-        val clearedRequestFlag = flags and 0b01111111_11111111_11111111_11111111
+        val clearedRequestFlag = flags and 0b00000000_00000000_00000000_00000111
 
         val clientFence = ClientFence(
             flags = clearedRequestFlag,

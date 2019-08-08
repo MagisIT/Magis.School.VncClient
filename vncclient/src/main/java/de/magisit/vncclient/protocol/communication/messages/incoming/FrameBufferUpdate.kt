@@ -36,7 +36,9 @@ class FrameBufferUpdate : IncomingMessage(messageId = 0) {
             val encodingType: Int = inputStream.readInt()
 
             // Check if the received encoding is supported, if not the server did something wrong and an exception is thrown
-            if (!rfbClient.mergedFrameEncodings.containsKey(encodingType)) throw RfbProtocolException("Received an unsupported encoding type")
+            if (!rfbClient.mergedFrameEncodings.containsKey(encodingType)) throw RfbProtocolException(
+                "Received an unsupported encoding type ($encodingType)"
+            )
 
             val frameEncoding = rfbClient.mergedFrameEncodings[encodingType]!!
 

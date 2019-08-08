@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.util.Log
-import androidx.core.graphics.set
 import de.magisit.vncclient.RfbClient
 import de.magisit.vncclient.protocol.encodings.FrameEncoding
 import de.magisit.vncclient.utils.ExtendedDataInputStream
@@ -15,6 +14,9 @@ import java.util.zip.Inflater
 class TightEncoding : FrameEncoding(encodingId = 7) {
 
     private val tightInflaters = arrayOfNulls<Inflater>(4)
+
+    private var pixels = intArrayOf(10)
+    private var currentColor: Int = 0
 
     // Initialize the encoding ids
     private val tightMaxSubEncoding = 0x09
@@ -89,6 +91,8 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
         yPosition: Int
     ) {
 
+        pixels = IntArray(width * height)
+
         // Initialize the general info provided by the FrameBufferInfo object
         bitsPerPixel = rfbClient.frameBufferInfo.pixelFormat.bitsPerPixel
         bytesPerPixel = bitsPerPixel / 8
@@ -151,12 +155,13 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
                 green = (pixelData shr greenShift) and pixelColorMask
                 blue = (pixelData shr redShift) and pixelColorMask
 
-                // Set pixels in bitmap
-                repeat(height) { y ->
-                    repeat(width) { x ->
-                        rfbClient.bitmap[xPosition + x, yPosition + y] = Color.rgb(red, green, blue)
-                    }
+                currentColor = Color.rgb(red, green, blue)
+
+                repeat(width * height) {
+                    pixels[it] = Color.rgb(red, green, blue)
                 }
+
+                rfbClient.bitmap.setPixels(pixels, 0, width, xPosition, yPosition, width, height)
                 // Return cause the rectangle is fully handled
                 return
             }
@@ -280,6 +285,15 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
                             tighColorPalette24,
                             rfbClient
                         )
+                        rfbClient.bitmap.setPixels(
+                            pixels,
+                            0,
+                            width,
+                            xPosition,
+                            yPosition,
+                            width,
+                            height
+                        )
                         return
                     }
                 } else {
@@ -290,9 +304,8 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
                     currentY = yPosition
 
                     repeat(dataSize) {
-                        rfbClient.bitmap[currentX, currentY] =
+                        pixels[width * (currentY - yPosition) + currentX - xPosition] =
                             tighColorPalette24[inflaterBuffer[it].toInt() and 0xFF]
-
                         currentX++
 
 
@@ -348,6 +361,15 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
                             tighColorPalette24,
                             rfbClient
                         )
+                        rfbClient.bitmap.setPixels(
+                            pixels,
+                            0,
+                            width,
+                            xPosition,
+                            yPosition,
+                            width,
+                            height
+                        )
                         return
                     }
                 } else {
@@ -358,7 +380,8 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
                     currentY = yPosition
 
                     repeat(dataSize) {
-                        rfbClient.bitmap[currentX, currentY] =
+
+                        pixels[width * (currentY - yPosition) + currentX - xPosition] =
                             tighColorPalette24[inflaterBuffer[it].toInt() and 0xFF]
 
                         currentX++
@@ -369,7 +392,15 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
                             currentY++
                         }
                     }
-
+                    rfbClient.bitmap.setPixels(
+                        pixels,
+                        0,
+                        width,
+                        xPosition,
+                        yPosition,
+                        width,
+                        height
+                    )
                     return
 
                 }
@@ -404,7 +435,8 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
                         green = (pixelData shr greenShift) and pixelColorMask
                         blue = (pixelData shr redShift) and pixelColorMask
 
-                        rfbClient.bitmap[currentX, currentY] = Color.rgb(red, green, blue)
+                        pixels[width * (currentY - yPosition) + currentX - xPosition] =
+                            Color.rgb(red, green, blue)
 
                         currentX++
 
@@ -421,6 +453,7 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
             }
         }
 
+        rfbClient.bitmap.setPixels(pixels, 0, width, xPosition, yPosition, width, height)
     }
 
     private fun decodeMonoData(
@@ -451,7 +484,8 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
                 n = 7
                 while (n >= 0) {
                     // Update the pixel at the current Position with the color at index 0 or 1 in palette
-                    rfbClient.bitmap[currentX, currentY] = palette[currentByte.toInt() shr n and 1]
+                    pixels[width * (currentY - yPosition) + currentX - xPosition] =
+                        palette[currentByte.toInt() shr n and 1]
 
                     // Increment the current pixel value and decrement the current bit shift value
                     currentX++
@@ -464,7 +498,7 @@ class TightEncoding : FrameEncoding(encodingId = 7) {
             // Iterate over the last byte which is filled with zeros (if there are a few pixels missing in the row
             n = 7
             while (n >= 8 - width % 8) {
-                rfbClient.bitmap[currentX, currentY] =
+                pixels[width * (currentY - yPosition) + currentX - xPosition] =
                     palette[src[yByteOffset * rowBytes + xByteOffset].toInt() shr n and 1]
                 currentX++
                 n--

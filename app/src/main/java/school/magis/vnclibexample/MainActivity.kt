@@ -16,7 +16,8 @@ class MainActivity : AppCompatActivity() {
 
 
         val client = RfbClient(
-            RfbSettings()
+            RfbSettings(
+            )
         ) {
             runOnUiThread {
                 imageView.setImageBitmap(it)

@@ -10,24 +10,30 @@ class ServerFence : IncomingMessage(messageId = 248) {
 
     val skipBytes = ByteArray(3)
 
+    var flags: Long = 0
+    var length: Int = 0
+    var payload: ByteArray = ByteArray(1)
+    var clientFence: ClientFence? = null
+    var clearedRequestFlag: Long = 0
+
     override fun onMessageReceived(inputStream: ExtendedDataInputStream, rfbClient: RfbClient) {
         inputStream.readFully(skipBytes, 0, skipBytes.size)
 
-        val flags = inputStream.readUInt32()
-        val length = inputStream.readUnsignedByte()
+        flags = inputStream.readUInt32()
+        length = inputStream.readUnsignedByte()
 
-        val payload = ByteArray(length)
+        if (payload.size != length) payload = ByteArray(length)
         inputStream.readFully(payload)
 
-        val clearedRequestFlag = flags and 0b00000000_00000000_00000000_00000111
+        clearedRequestFlag = flags and 0b00000000_00000000_00000000_00000111
 
-        val clientFence = ClientFence(
+        clientFence = ClientFence(
             flags = clearedRequestFlag,
             length = length,
             payload = payload
         )
 
-        rfbClient.rfbProtocol.sendMessage(clientFence, true)
+        rfbClient.rfbProtocol.sendMessage(clientFence!!, true)
         rfbClient.rfbProtocol.sendMessage(EnableContinuousUpdates(true, 0, 0, 1920, 1080))
     }
 

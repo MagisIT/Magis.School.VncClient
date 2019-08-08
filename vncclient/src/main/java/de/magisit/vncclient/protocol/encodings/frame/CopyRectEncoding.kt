@@ -6,7 +6,7 @@ import de.magisit.vncclient.utils.ExtendedDataInputStream
 
 class CopyRectEncoding : FrameEncoding(encodingId = 1) {
 
-    private lateinit var toCopyPixels: IntArray
+    private var toCopyPixels: IntArray = intArrayOf()
 
     override fun readAndDecode(
         inputStream: ExtendedDataInputStream,
@@ -19,7 +19,7 @@ class CopyRectEncoding : FrameEncoding(encodingId = 1) {
         val srcX = inputStream.readUnsignedShort()
         val srcY = inputStream.readUnsignedShort()
 
-        if (!::toCopyPixels.isInitialized) {
+        if (toCopyPixels.size < rfbClient.frameBufferInfo.frameBufferWidth * rfbClient.frameBufferInfo.frameBufferHeight) {
             toCopyPixels =
                 IntArray(rfbClient.frameBufferInfo.frameBufferWidth * rfbClient.frameBufferInfo.frameBufferHeight)
         }

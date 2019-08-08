@@ -9,6 +9,26 @@ import de.magisit.vncclient.utils.ExtendedDataInputStream
  * Decodes a rectangle of PixelData into argb pixels
  */
 class RawEncoding : FrameEncoding(0) {
+    var bitsPerPixel: Int = 0
+    var bytesPerPixel: Int = 0
+    var pixelColorMask: Int = 0
+    var blueShift: Int = 0
+    var greenShift: Int = 0
+    var redShift: Int = 0
+    var pixelData: Int = 0
+    var blue: Int = 0
+    var green: Int = 0
+    var red: Int = 0
+    var totalBytes: Int = 0
+    var totalReadBytes: Int = 0
+    var chunkBuffer: ByteArray = ByteArray(16000)
+    var colorOffset: Int = 0
+    var remainingBytes: Int = 0
+    var chunkLength: Int = 0
+    var computedBytes: Int = 0
+    var pixels = intArrayOf()
+    var currentPixelIndex = 0
+
 
     /**
      * Read the data from the input stream and decode it
@@ -21,14 +41,17 @@ class RawEncoding : FrameEncoding(0) {
         xPosition: Int,
         yPosition: Int
     ) {
+        pixels = IntArray(width * height)
+        currentPixelIndex = 0
+
         // Bits per pixel from the PixelFormat information
-        val bitsPerPixel = rfbClient.frameBufferInfo.pixelFormat.bitsPerPixel
+        bitsPerPixel = rfbClient.frameBufferInfo.pixelFormat.bitsPerPixel
 
         // Bits per pixel divided by 8 to get bytes
-        val bytesPerPixel = bitsPerPixel / 8
+        bytesPerPixel = bitsPerPixel / 8
 
         // Pixel color mask to extract the colors after shifting
-        var pixelColorMask = 0
+        pixelColorMask = 0
 
         // Set the pixel mask
         repeat(bitsPerPixel / 4) {
@@ -36,42 +59,21 @@ class RawEncoding : FrameEncoding(0) {
         }
 
         // Get the blue, green and red shift from PixelData
-        val blueShift = rfbClient.frameBufferInfo.pixelFormat.blueShift
-        val greenShift = rfbClient.frameBufferInfo.pixelFormat.greenShift
-        val redShift = rfbClient.frameBufferInfo.pixelFormat.redShift
+        blueShift = rfbClient.frameBufferInfo.pixelFormat.blueShift
+        greenShift = rfbClient.frameBufferInfo.pixelFormat.greenShift
+        redShift = rfbClient.frameBufferInfo.pixelFormat.redShift
 
         // Initialize the pixel data
-        var pixelData = 0
-
-        // Initialize the variables for blue, green and red color values
-        var blue: Int
-        var green: Int
-        var red: Int
+        pixelData = 0
 
         // Calculate the total bytes to read
-        val totalBytes = height * width * bytesPerPixel
+        totalBytes = height * width * bytesPerPixel
 
         // Set the read bytes to 0
-        var totalReadBytes = 0
-
-        // Initialize the chunk buffer array to hold max. 160000 bytes
-        val chunkBuffer = ByteArray(16000)
-
-        // Initialize the x and y coordinate
-        var x = 0
-        var y = 0
+        totalReadBytes = 0
 
         // Initialize the color offset
-        var colorOffset = 0
-
-        // Initialize a variable for the remaining bytes
-        var remainingBytes: Int
-
-        // Initialize a variable for the current chunk length (because is.read() does not always read the full array)
-        var chunkLength: Int
-
-        // Initialize a variable to save the current position in the chunk byte array
-        var computedBytes: Int
+        colorOffset = 0
 
         // Repeat until all bytes of the current rectangle are read
         while (totalReadBytes < totalBytes) {
@@ -91,7 +93,8 @@ class RawEncoding : FrameEncoding(0) {
             // Repeat for each byte in the chunk
             repeat(chunkLength) {
                 // Add the new byte to the existing pixel data
-                pixelData = pixelData or (chunkBuffer[computedBytes++].toInt() and 0xFF shl (colorOffset * 8))
+                pixelData =
+                    pixelData or (chunkBuffer[computedBytes++].toInt() and 0xFF shl (colorOffset * 8))
 
                 // If we read the needed 4 bytes (RGBA) shift them by the shift value and apply the color mask
                 if (++colorOffset == bytesPerPixel) {
@@ -100,14 +103,9 @@ class RawEncoding : FrameEncoding(0) {
                     red = (pixelData shr redShift) and pixelColorMask
 
                     // TODO: Multiply color values to support 24 and 16 bit colors.
-                    // Set the pixel on the bitmap
-                    rfbClient.bitmap.setPixel(xPosition + x, yPosition + y, Color.rgb(red, green, blue))
 
-                    // If we reached the end of one row set the x coordinate to 0 and increase y by 1
-                    if (++x == width) {
-                        x = 0
-                        y++
-                    }
+                    pixels[currentPixelIndex++] = Color.rgb(red, green, blue)
+
 
                     // Reset the pixel data and color offset
                     pixelData = 0
@@ -118,5 +116,7 @@ class RawEncoding : FrameEncoding(0) {
             // Increase the total read bytes by the length of the chunk processed
             totalReadBytes += chunkLength
         }
+
+        rfbClient.bitmap.setPixels(pixels, 0, width, xPosition, yPosition, width, height)
     }
 }
